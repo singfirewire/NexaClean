@@ -1,9 +1,15 @@
 import os
+import sys
 import tkinter as tk
 from tkinter import messagebox, ttk, filedialog
 import shutil
 from datetime import datetime
 import json
+
+def get_app_dir():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
 
 class NexaClean:
     def __init__(self, root):
@@ -12,6 +18,7 @@ class NexaClean:
         self.root.geometry("900x750")
         self.root.resizable(False, False)
         
+        self.app_dir = get_app_dir()
         self.desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
         
         self.checkbox_vars = []
@@ -252,6 +259,7 @@ class NexaClean:
     def on_theme_change(self, event=None):
         selected_theme = self.theme_var.get()
         self.apply_theme(selected_theme)
+        self.save_stats()
     
     def create_status_bar(self):
         status_frame = tk.Frame(self.root, bg=self.colors['bg_card'], height=40)
@@ -1339,17 +1347,21 @@ class NexaClean:
     
     def load_stats(self):
         try:
-            stats_file = "nexaclean_stats.json"
+            stats_file = os.path.join(self.app_dir, "nexaclean_stats.json")
             if os.path.exists(stats_file):
                 with open(stats_file, 'r', encoding='utf-8') as f:
                     saved_stats = json.load(f)
                     self.stats.update(saved_stats)
+                    if 'theme' in saved_stats and saved_stats['theme'] in self.themes:
+                        self.theme_var.set(saved_stats['theme'])
+                        self.colors = self.themes[saved_stats['theme']]
         except Exception as e:
             print(f"Cannot load stats: {e}")
     
     def save_stats(self):
         try:
-            stats_file = "nexaclean_stats.json"
+            stats_file = os.path.join(self.app_dir, "nexaclean_stats.json")
+            self.stats['theme'] = self.theme_var.get()
             with open(stats_file, 'w', encoding='utf-8') as f:
                 json.dump(self.stats, f, ensure_ascii=False, indent=2)
         except Exception as e:
