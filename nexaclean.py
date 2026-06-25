@@ -11,7 +11,6 @@ class NexaClean:
         self.root.title("NexaClean")
         self.root.geometry("900x750")
         self.root.resizable(False, False)
-        self.root.configure(bg="#1a1a2e")
         
         self.desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
         
@@ -24,21 +23,96 @@ class NexaClean:
         self.extensions = {}
         self.current_folder_path = tk.StringVar(value=self.desktop_path)
         self.duplicate_handling = tk.StringVar(value="skip")
+        self.theme_var = tk.StringVar(value="Dark Neon")
         
-        self.colors = {
-            'bg_dark': '#1a1a2e',
-            'bg_card': '#16213e',
-            'bg_input': '#0f3460',
-            'accent': '#e94560',
-            'accent_green': '#00d4aa',
-            'accent_blue': '#4361ee',
-            'accent_orange': '#ff6b35',
-            'text_primary': '#ffffff',
-            'text_secondary': '#a0a0b0',
-            'success': '#00d4aa',
-            'danger': '#e94560',
-            'warning': '#ff6b35'
+        self.themes = {
+            "Dark Neon": {
+                'bg_dark': '#1a1a2e',
+                'bg_card': '#16213e',
+                'bg_input': '#0f3460',
+                'accent': '#e94560',
+                'accent_green': '#00d4aa',
+                'accent_blue': '#4361ee',
+                'accent_orange': '#ff6b35',
+                'text_primary': '#ffffff',
+                'text_secondary': '#a0a0b0',
+                'success': '#00d4aa',
+                'danger': '#e94560',
+                'warning': '#ff6b35'
+            },
+            "Light Clean": {
+                'bg_dark': '#f5f5f5',
+                'bg_card': '#ffffff',
+                'bg_input': '#e8e8e8',
+                'accent': '#3b82f6',
+                'accent_green': '#22c55e',
+                'accent_blue': '#3b82f6',
+                'accent_orange': '#f97316',
+                'text_primary': '#1f2937',
+                'text_secondary': '#6b7280',
+                'success': '#22c55e',
+                'danger': '#ef4444',
+                'warning': '#f97316'
+            },
+            "Ocean Blue": {
+                'bg_dark': '#0a1929',
+                'bg_card': '#132f4c',
+                'bg_input': '#1a3a5c',
+                'accent': '#0077b6',
+                'accent_green': '#06d6a0',
+                'accent_blue': '#0096c7',
+                'accent_orange': '#fca311',
+                'text_primary': '#ffffff',
+                'text_secondary': '#94a3b8',
+                'success': '#06d6a0',
+                'danger': '#e63946',
+                'warning': '#fca311'
+            },
+            "Forest Green": {
+                'bg_dark': '#1a2f1a',
+                'bg_card': '#2d4a2d',
+                'bg_input': '#3d5c3d',
+                'accent': '#4ade80',
+                'accent_green': '#22c55e',
+                'accent_blue': '#60a5fa',
+                'accent_orange': '#fbbf24',
+                'text_primary': '#ffffff',
+                'text_secondary': '#a3be8c',
+                'success': '#22c55e',
+                'danger': '#f87171',
+                'warning': '#fbbf24'
+            },
+            "Sunset Orange": {
+                'bg_dark': '#2d1b1b',
+                'bg_card': '#3d2525',
+                'bg_input': '#4d3030',
+                'accent': '#fb923c',
+                'accent_green': '#4ade80',
+                'accent_blue': '#60a5fa',
+                'accent_orange': '#f97316',
+                'text_primary': '#ffffff',
+                'text_secondary': '#d4a574',
+                'success': '#4ade80',
+                'danger': '#f87171',
+                'warning': '#fbbf24'
+            },
+            "Purple Haze": {
+                'bg_dark': '#1e1033',
+                'bg_card': '#2a1845',
+                'bg_input': '#3a2555',
+                'accent': '#a855f7',
+                'accent_green': '#4ade80',
+                'accent_blue': '#818cf8',
+                'accent_orange': '#fb923c',
+                'text_primary': '#ffffff',
+                'text_secondary': '#c4b5fd',
+                'success': '#4ade80',
+                'danger': '#f87171',
+                'warning': '#fb923c'
+            }
         }
+        
+        self.colors = self.themes["Dark Neon"]
         
         self.stats = {
             'folders_deleted': 0,
@@ -90,9 +164,68 @@ class NexaClean:
                  background=[("selected", self.colors['accent'])],
                  foreground=[("selected", self.colors['text_primary'])])
     
+    def apply_theme(self, theme_name):
+        if theme_name in self.themes:
+            self.colors = self.themes[theme_name]
+            self.root.configure(bg=self.colors['bg_dark'])
+            self.refresh_ui()
+    
+    def refresh_ui(self):
+        self.setup_styles()
+        
+        for widget in self.root.winfo_children():
+            if isinstance(widget, tk.Frame):
+                widget.configure(bg=self.colors['bg_dark'])
+                for child in widget.winfo_children():
+                    self.update_widget_colors(child)
+        
+        self.create_widgets()
+        self.search_folders()
+        self.refresh_stats_display()
+    
+    def update_widget_colors(self, widget):
+        try:
+            if isinstance(widget, tk.Frame):
+                widget.configure(bg=self.colors['bg_card'])
+            elif isinstance(widget, tk.Label):
+                current_bg = widget.cget("bg")
+                if current_bg in self.themes.get("Dark Neon", {}).values():
+                    widget.configure(bg=self.colors['bg_card'], 
+                                   fg=self.colors['text_primary'])
+            elif isinstance(widget, tk.Button):
+                widget.configure(bg=self.colors['accent_blue'],
+                               fg=self.colors['text_primary'])
+        except:
+            pass
+        
+        for child in widget.winfo_children():
+            self.update_widget_colors(child)
+    
     def create_widgets(self):
+        for widget in self.root.winfo_children():
+            if isinstance(widget, (ttk.Notebook, tk.Frame)):
+                widget.destroy()
+        
+        top_frame = tk.Frame(self.root, bg=self.colors['bg_dark'])
+        top_frame.pack(fill=tk.X, padx=15, pady=(15, 5))
+        
+        theme_label = tk.Label(top_frame, text="Theme:", 
+                              font=("Segoe UI", 10, "bold"),
+                              bg=self.colors['bg_dark'],
+                              fg=self.colors['text_primary'])
+        theme_label.pack(side=tk.LEFT, padx=(0, 10))
+        
+        self.theme_combo = ttk.Combobox(top_frame, 
+                                        textvariable=self.theme_var,
+                                        values=list(self.themes.keys()),
+                                        state="readonly",
+                                        width=15,
+                                        font=("Segoe UI", 10))
+        self.theme_combo.pack(side=tk.LEFT)
+        self.theme_combo.bind("<<ComboboxSelected>>", self.on_theme_change)
+        
         self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
         
         self.tab1 = tk.Frame(self.notebook, bg=self.colors['bg_dark'])
         self.tab2 = tk.Frame(self.notebook, bg=self.colors['bg_dark'])
@@ -115,6 +248,10 @@ class NexaClean:
         self.create_tab4_widgets()
         self.create_tab5_widgets()
         self.create_status_bar()
+    
+    def on_theme_change(self, event=None):
+        selected_theme = self.theme_var.get()
+        self.apply_theme(selected_theme)
     
     def create_status_bar(self):
         status_frame = tk.Frame(self.root, bg=self.colors['bg_card'], height=40)
