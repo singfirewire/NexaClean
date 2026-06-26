@@ -9,7 +9,7 @@ Desktop cleanup and organization tool for Windows with modern dark UI.
 - **Shortcut Management** - Move shortcuts to a dedicated folder
 - **Temp File Cleanup** - Remove temporary and junk files (.tmp, .temp, .log, .cache)
 - **Statistics** - Track your cleanup progress
-- **6 Themes** - Dark Neon, Light Clean, Ocean Blue, Forest Green, Sunset Orange, Purple Haze
+- **9 Themes** - Dark Neon, Light Clean, Ocean Blue, Forest Green, Sunset Orange, Purple Haze, Glitch Purple, Retro Purple
 
 ## Screenshots
 

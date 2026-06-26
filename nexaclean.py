@@ -30,9 +30,26 @@ class NexaClean:
         self.extensions = {}
         self.current_folder_path = tk.StringVar(value=self.desktop_path)
         self.duplicate_handling = tk.StringVar(value="skip")
-        self.theme_var = tk.StringVar(value="Dark Neon")
+        self.theme_var = tk.StringVar(value="Retro Purple")
         
+        self.title_bar = None
+        self.window_borderless = False
+
         self.themes = {
+            "Macrium Dark": {
+                'bg_dark': '#1c1c1c',
+                'bg_card': '#2d2d2d',
+                'bg_input': '#3a3a3a',
+                'accent': '#e8850c',
+                'accent_green': '#5cb85c',
+                'accent_blue': '#5bc0de',
+                'accent_orange': '#e8850c',
+                'text_primary': '#e0e0e0',
+                'text_secondary': '#999999',
+                'success': '#5cb85c',
+                'danger': '#d9534f',
+                'warning': '#e8850c'
+            },
             "Dark Neon": {
                 'bg_dark': '#1a1a2e',
                 'bg_card': '#16213e',
@@ -116,10 +133,42 @@ class NexaClean:
                 'success': '#4ade80',
                 'danger': '#f87171',
                 'warning': '#fb923c'
+            },
+            "Glitch Purple": {
+                'bg_dark': '#f0e8ff',
+                'bg_card': '#ffffff',
+                'bg_input': '#e8dff5',
+                'accent': '#8b5cf6',
+                'accent_green': '#22c55e',
+                'accent_blue': '#6366f1',
+                'accent_orange': '#f97316',
+                'text_primary': '#1e1b4b',
+                'text_secondary': '#6b7280',
+                'success': '#22c55e',
+                'danger': '#ef4444',
+                'warning': '#f97316'
+            },
+            "Retro Purple": {
+                'bg_dark': '#1a1025',
+                'bg_card': '#2a1d3d',
+                'bg_input': '#3a2d52',
+                'accent': '#b388ff',
+                'accent_green': '#a5d6a7',
+                'accent_blue': '#90caf9',
+                'accent_orange': '#ffcc80',
+                'text_primary': '#e8d5f5',
+                'text_secondary': '#9575cd',
+                'success': '#a5d6a7',
+                'danger': '#ef9a9a',
+                'warning': '#ffcc80',
+                'retro_font': 'Consolas',
+                'retro_border': 'groove',
+                'retro_border_width': 3,
+                'retro_card_relief': 'ridge'
             }
         }
         
-        self.colors = self.themes["Dark Neon"]
+        self.colors = self.themes["Retro Purple"]
         
         self.stats = {
             'folders_deleted': 0,
@@ -132,6 +181,7 @@ class NexaClean:
         }
         
         self.load_stats()
+        self.apply_theme(self.theme_var.get())
         self.setup_styles()
         self.create_widgets()
         self.search_folders()
@@ -140,6 +190,7 @@ class NexaClean:
         style = ttk.Style()
         style.theme_use('clam')
         
+        tab_font = self.get_font(11, True)
         style.configure("TNotebook", 
                        background=self.colors['bg_dark'],
                        borderwidth=0)
@@ -147,7 +198,7 @@ class NexaClean:
                        background=self.colors['bg_card'],
                        foreground=self.colors['text_primary'],
                        padding=[20, 10],
-                       font=("Segoe UI", 11, "bold"))
+                       font=tab_font)
         style.map("TNotebook.Tab",
                  background=[("selected", self.colors['accent'])],
                  foreground=[("selected", self.colors['text_primary'])])
@@ -157,16 +208,18 @@ class NexaClean:
                        troughcolor=self.colors['bg_dark'],
                        borderwidth=0)
         
+        tree_font = self.get_font(10)
+        tree_heading_font = self.get_font(10, True)
         style.configure("Custom.Treeview",
                        background=self.colors['bg_card'],
                        foreground=self.colors['text_primary'],
                        fieldbackground=self.colors['bg_card'],
-                       font=("Segoe UI", 10),
+                       font=tree_font,
                        rowheight=30)
         style.configure("Custom.Treeview.Heading",
                        background=self.colors['bg_input'],
                        foreground=self.colors['text_primary'],
-                       font=("Segoe UI", 10, "bold"))
+                       font=tree_heading_font)
         style.map("Custom.Treeview",
                  background=[("selected", self.colors['accent'])],
                  foreground=[("selected", self.colors['text_primary'])])
@@ -175,6 +228,12 @@ class NexaClean:
         if theme_name in self.themes:
             self.colors = self.themes[theme_name]
             self.root.configure(bg=self.colors['bg_dark'])
+            
+            if self.is_retro_theme() and not self.window_borderless:
+                self.set_borderless(True)
+            elif not self.is_retro_theme() and self.window_borderless:
+                self.set_borderless(False)
+            
             self.refresh_ui()
     
     def refresh_ui(self):
@@ -211,7 +270,8 @@ class NexaClean:
     def create_widgets(self):
         for widget in self.root.winfo_children():
             if isinstance(widget, (ttk.Notebook, tk.Frame)):
-                widget.destroy()
+                if widget != self.title_bar:
+                    widget.destroy()
         
         top_frame = tk.Frame(self.root, bg=self.colors['bg_dark'])
         top_frame.pack(fill=tk.X, padx=15, pady=(15, 5))
@@ -287,10 +347,13 @@ class NexaClean:
         self.root.update_idletasks()
     
     def create_card(self, parent, **kwargs):
+        relief = self.colors.get('retro_card_relief', tk.FLAT)
+        borderwidth = self.colors.get('retro_border_width', 1) if self.is_retro_theme() else 1
         card = tk.Frame(parent, 
                        bg=self.colors['bg_card'],
                        highlightbackground=self.colors['bg_input'],
-                       highlightthickness=1,
+                       highlightthickness=borderwidth,
+                       relief=relief,
                        **kwargs)
         return card
     
@@ -304,13 +367,23 @@ class NexaClean:
         }
         bg_color = colors.get(color_key, self.colors['accent_blue'])
         
+        if self.is_retro_theme():
+            relief = tk.RAISED
+            borderwidth = self.colors.get('retro_border_width', 3)
+            font = self.get_font(11, True)
+        else:
+            relief = tk.FLAT
+            borderwidth = 0
+            font = ("Segoe UI", 10, "bold")
+        
         btn = tk.Button(parent,
                        text=text,
                        command=command,
                        bg=bg_color,
                        fg=self.colors['text_primary'],
-                       font=("Segoe UI", 10, "bold"),
-                       relief=tk.FLAT,
+                       font=font,
+                       relief=relief,
+                       bd=borderwidth,
                        cursor="hand2",
                        activebackground=self.lighten_color(bg_color),
                        activeforeground=self.colors['text_primary'],
@@ -327,17 +400,101 @@ class NexaClean:
         b = min(255, int(b * factor))
         return f"#{r:02x}{g:02x}{b:02x}"
     
+    def is_retro_theme(self):
+        return 'retro_font' in self.colors
+    
+    def get_font(self, size=10, bold=False):
+        weight = "bold" if bold else "normal"
+        if self.is_retro_theme():
+            return (self.colors['retro_font'], size, weight)
+        return ("Segoe UI", size, weight)
+    
+    def create_custom_title_bar(self):
+        if self.title_bar:
+            self.title_bar.destroy()
+        
+        self.title_bar = tk.Frame(self.root, bg=self.colors['bg_dark'], height=35)
+        self.title_bar.pack(fill=tk.X, side=tk.TOP)
+        self.title_bar.pack_propagate(False)
+        
+        title_font = self.get_font(11, True)
+        
+        title_label = tk.Label(self.title_bar, text="NexaClean",
+                              font=title_font,
+                              bg=self.colors['bg_dark'],
+                              fg=self.colors['text_primary'])
+        title_label.pack(side=tk.LEFT, padx=15, pady=5)
+        
+        close_btn = tk.Button(self.title_bar, text="X",
+                             font=self.get_font(10, True),
+                             bg=self.colors['danger'],
+                             fg=self.colors['text_primary'],
+                             bd=0,
+                             width=3,
+                             command=self.close_window)
+        close_btn.pack(side=tk.RIGHT, padx=2, pady=5)
+        
+        minimize_btn = tk.Button(self.title_bar, text="_",
+                                font=self.get_font(10, True),
+                                bg=self.colors['accent_orange'],
+                                fg=self.colors['text_primary'],
+                                bd=0,
+                                width=3,
+                                command=self.minimize_window)
+        minimize_btn.pack(side=tk.RIGHT, padx=2, pady=5)
+        
+        self.title_bar.bind("<Button-1>", self.start_drag)
+        self.title_bar.bind("<B1-Motion>", self.do_drag)
+        title_label.bind("<Button-1>", self.start_drag)
+        title_label.bind("<B1-Motion>", self.do_drag)
+    
+    def start_drag(self, event):
+        self._drag_x = event.x
+        self._drag_y = event.y
+    
+    def do_drag(self, event):
+        x = self.root.winfo_x() + event.x - self._drag_x
+        y = self.root.winfo_y() + event.y - self._drag_y
+        self.root.geometry(f"+{x}+{y}")
+    
+    def minimize_window(self):
+        self.root.overrideredirect(False)
+        self.root.iconify()
+        self.root.after(100, self.restore_override)
+    
+    def restore_override(self):
+        self.root.bind("<Map>", self.on_restore)
+    
+    def on_restore(self, event):
+        self.root.unbind("<Map>")
+        if self.window_borderless:
+            self.root.overrideredirect(True)
+    
+    def close_window(self):
+        self.root.destroy()
+    
+    def set_borderless(self, enabled):
+        self.window_borderless = enabled
+        if enabled:
+            self.root.overrideredirect(True)
+            self.create_custom_title_bar()
+        else:
+            self.root.overrideredirect(False)
+            if self.title_bar:
+                self.title_bar.destroy()
+                self.title_bar = None
+    
     def create_tab1_widgets(self):
         header = self.create_card(self.tab1)
         header.pack(fill=tk.X, padx=20, pady=(20, 10))
         
         tk.Label(header, text="New Folder Cleanup", 
-                font=("Segoe UI", 16, "bold"),
+                font=self.get_font(16, True),
                 bg=self.colors['bg_card'],
                 fg=self.colors['text_primary']).pack(pady=15)
         
         tk.Label(header, text="Find and delete unnecessary 'New folder' directories",
-                font=("Segoe UI", 10),
+                font=self.get_font(10),
                 bg=self.colors['bg_card'],
                 fg=self.colors['text_secondary']).pack(pady=(0, 15))
         
@@ -388,7 +545,7 @@ class NexaClean:
         header.pack(fill=tk.X, padx=20, pady=(20, 10))
         
         tk.Label(header, text="File Organization", 
-                font=("Segoe UI", 16, "bold"),
+                font=self.get_font(16, True),
                 bg=self.colors['bg_card'],
                 fg=self.colors['text_primary']).pack(pady=15)
         
@@ -396,7 +553,7 @@ class NexaClean:
         folder_frame.pack(fill=tk.X, padx=20, pady=5)
         
         tk.Label(folder_frame, text="Folder:", 
-                font=("Segoe UI", 10),
+                font=self.get_font(10),
                 bg=self.colors['bg_card'],
                 fg=self.colors['text_secondary']).pack(side=tk.LEFT)
         
@@ -476,12 +633,12 @@ class NexaClean:
         header.pack(fill=tk.X, padx=20, pady=(20, 10))
         
         tk.Label(header, text="Shortcut Management", 
-                font=("Segoe UI", 16, "bold"),
+                font=self.get_font(16, True),
                 bg=self.colors['bg_card'],
                 fg=self.colors['text_primary']).pack(pady=15)
         
         tk.Label(header, text="Move shortcuts to a dedicated SHORTCUT folder",
-                font=("Segoe UI", 10),
+                font=self.get_font(10),
                 bg=self.colors['bg_card'],
                 fg=self.colors['text_secondary']).pack(pady=(0, 15))
         
@@ -540,12 +697,12 @@ class NexaClean:
         header.pack(fill=tk.X, padx=20, pady=(20, 10))
         
         tk.Label(header, text="Temp File Cleanup", 
-                font=("Segoe UI", 16, "bold"),
+                font=self.get_font(16, True),
                 bg=self.colors['bg_card'],
                 fg=self.colors['text_primary']).pack(pady=15)
         
         tk.Label(header, text="Remove temporary and junk files (.tmp, .temp, .log, .cache)",
-                font=("Segoe UI", 10),
+                font=self.get_font(10),
                 bg=self.colors['bg_card'],
                 fg=self.colors['text_secondary']).pack(pady=(0, 15))
         
@@ -603,7 +760,7 @@ class NexaClean:
         header.pack(fill=tk.X, padx=20, pady=(20, 10))
         
         tk.Label(header, text="Statistics & Reports", 
-                font=("Segoe UI", 16, "bold"),
+                font=self.get_font(16, True),
                 bg=self.colors['bg_card'],
                 fg=self.colors['text_primary']).pack(pady=15)
         
