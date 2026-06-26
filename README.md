@@ -18,23 +18,39 @@ Dark Neon theme with modern UI design.
 ## Requirements
 
 - Windows OS
-- Python 3.x (for running from source)
+- Python 3.x (for Python version)
+- Go 1.26+ + MSYS2/MinGW (for Go version)
 
 ## Quick Start
 
 Download `NexaClean.exe` from the [Releases](https://github.com/singfirewire/NexaClean/releases) page and run it directly.
 
-## Run from Source
+## Run from Source (Python)
 
 ```bash
 python nexaclean.py
 ```
 
-## Build Executable
+## Run from Source (Go)
+
+```bash
+cd go_nexaclean
+go build -ldflags "-H windowsgui" -o nexaclean.exe .
+./nexaclean.exe
+```
+
+## Build Executable (Python)
 
 ```bash
 pip install pyinstaller
 pyinstaller --onefile --windowed --icon=favicon-FOLDER.ico nexaclean.py
+```
+
+## Build Executable (Go)
+
+```bash
+cd go_nexaclean
+go build -ldflags "-H windowsgui" -o nexaclean.exe .
 ```
 
 ## License

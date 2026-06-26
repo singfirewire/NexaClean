@@ -1,0 +1,4 @@
+*.exe
+*.exe~
+stats.json
+nexaclean_stats.json

@@ -42,3 +42,8 @@ cover/
 *.old
 nexaclean_stats.json
 desktop_manager_stats.json
+
+# Go
+go_nexaclean/*.exe
+go_nexaclean/*.exe~
+go_nexaclean/stats.json
